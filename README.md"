@@ -60,12 +60,13 @@ Create a `.env` file in your project root:
 
 ```env
 HOST=your-server.example.com
-PORT=6597
+PORT=8080
 USERNAME=your_username
 PASSWORD=your_password
+PROTOCOL=http
 ```
 
-**Note**: PORT in `.env` is for the SQL port. The JSON API typically runs on port 8080 (HTTP) or 8443 (HTTPS).
+**Note**: PORT should be set to the JSON API port: 8080 for HTTP or 8443 for HTTPS.
 
 ## Usage Examples
 
@@ -93,7 +94,7 @@ from sqlalchemy import create_engine, text
 
 load_dotenv()
 
-connection_string = f"faircom://{os.getenv('USERNAME')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:8080/ctreeSQL?protocol=http"
+connection_string = f"faircom://{os.getenv('USERNAME')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:{os.getenv('PORT')}/{os.getenv('DATABASE', 'ctreeSQL')}?protocol={os.getenv('PROTOCOL', 'http')}"
 engine = create_engine(connection_string)
 
 with engine.connect() as conn:

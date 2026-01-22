@@ -1,0 +1,235 @@
+# SQLAlchemy FairCom
+
+A pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API. This driver works cross-platform without requiring native C libraries.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+
+## Features
+
+- ✅ Pure Python implementation (no native libraries required)
+- ✅ Cross-platform: Works on macOS, Linux, Windows
+- ✅ SQLAlchemy compatible (1.4+)
+- ✅ DB-API 2.0 compliant
+- ✅ Uses FairCom JSON API over HTTP/HTTPS
+- ✅ Compatible with Apache Superset, Pandas, and other SQLAlchemy-based tools
+
+## Installation
+
+### From PyPI (Coming Soon)
+
+```bash
+pip install sqlalchemy-faircom
+```
+
+### From Source
+
+```bash
+git clone https://github.com/faircom/sqlalchemy-faircom.git
+cd sqlalchemy-faircom
+pip install -e .
+```
+
+### For Development
+
+```bash
+git clone https://github.com/faircom/sqlalchemy-faircom.git
+cd sqlalchemy-faircom
+pip install -e .[dev]
+pytest
+```
+
+## Connection String Format
+
+```
+faircom+jsonapi://username:password@host:port/database?protocol=http
+```
+
+### Parameters
+
+- `username`: Database username (e.g., ADMIN)
+- `password`: Database password
+- `host`: Database server hostname
+- `port`: JSON API port (typically 8080 for HTTP, 8443 for HTTPS)
+- `database`: Database name (e.g., ctreeSQL)
+- `protocol`: Either `http` or `https` (default: http)
+
+## Environment Variables
+
+Create a `.env` file in your project root:
+
+```env
+HOST=holly.local
+PORT=6597
+USERNAME=ADMIN
+PASSWORD=ADMIN
+```
+
+**Note**: PORT in `.env` is for the SQL port. The JSON API typically runs on port 8080 (HTTP) or 8443 (HTTPS).
+
+## Usage Examples
+
+### Basic SQLAlchemy Usage
+
+```python
+from sqlalchemy import create_engine, text
+
+# Create connection
+connection_string = 'faircom+jsonapi://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http'
+engine = create_engine(connection_string, echo=True)
+
+# Execute queries
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT 1 as test"))
+    print(result.fetchone())
+```
+
+### Using Environment Variables
+
+```python
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+
+load_dotenv()
+
+connection_string = f"faircom+jsonapi://{os.getenv('USERNAME')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:8080/ctreeSQL?protocol=http"
+engine = create_engine(connection_string)
+
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT * FROM my_table"))
+    for row in result:
+        print(row)
+```
+
+### Direct DB-API Usage
+
+```python
+from faircom_jsonapi.dbapi import connect
+
+# Connect to database
+conn = connect(
+    host='holly.local',
+    port=8080,
+    username='ADMIN',
+    password='ADMIN',
+    database='ctreeSQL',
+    protocol='http'
+)
+
+# Create cursor and execute
+cursor = conn.cursor()
+cursor.execute("SELECT 1 as test")
+print(cursor.fetchone())
+
+cursor.close()
+conn.close()
+```
+
+## Testing
+
+Run the included test scripts:
+
+```bash
+# Test JSON API directly
+python test_json_api.py
+
+# Test SQLAlchemy connection
+python test_sqlalchemy.py
+```
+
+## Project Structure
+
+```
+Superset Test/
+├── .env                          # Environment configuration
+├── setup.py                      # Package setup
+├── faircom_jsonapi/
+│   ├── __init__.py              # Package initialization
+│   ├── client.py                # FairCom JSON API client
+│   ├── dbapi.py                 # DB-API 2.0 implementation
+│   └── sqlalchemy_dialect.py   # SQLAlchemy dialect
+├── test_json_api.py             # JSON API test
+└── test_sqlalchemy.py           # SQLAlchemy test
+```
+
+## Compatibility
+
+- Python 3.7+
+- SQLAlchemy 1.4+
+- Works with any tool that uses SQLAlchemy (e.g., Apache Superset, Pandas, etc.)
+
+## Limitations
+
+- Read operations are fully supported
+- Write operations may have limited support (depends on JSON API capabilities)
+- Some advanced SQLAlchemy features may not be implemented
+
+## For Superset Integration
+
+This driver can be used with Apache Superset. Use the following connection string in Superset:
+
+```
+faircom+jsonapi://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Testing
+
+Run the test suite:
+
+```bash
+pytest
+```
+
+## Publishing
+
+To publish a new version to PyPI:
+
+```bash
+# Update version in pyproject.toml
+# Clean and build
+rm -rf dist/ build/ *.egg-info
+python -m build
+
+# Upload to PyPI
+twine upload dist/*
+```
+
+## Troubleshooting
+
+### Connection Refused
+- Ensure the JSON API is enabled on your FairCom server
+- Verify the correct port (8080 for HTTP, 8443 for HTTPS)
+- Check firewall settings
+
+### SSL Warnings
+The driver currently disables SSL verification for HTTPS connections. For production use, you may want to enable proper certificate verification in `faircom_jsonapi/client.py`.
+
+### Reserved Keywords
+Some SQL keywords like "number" are reserved in FairCom. Use different column aliases if you encounter syntax errors.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Links
+
+- [FairCom Corporation](https://www.faircom.com)
+- [FairCom Documentation](https://docs.faircom.com)
+- [SQLAlchemy](https://www.sqlalchemy.org)
+
+## Acknowledgments
+
+- Built with SQLAlchemy
+- Uses FairCom Database JSON API
+- Pure Python implementation for maximum compatibility

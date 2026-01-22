@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+include pyproject.toml
+include QUICKSTART.md
+recursive-include faircom_jsonapi *.py
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .env

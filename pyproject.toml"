@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "SQLAlchemy dialect for FairCom Database via JSON API"
 readme = "README.md"
 requires-python = ">=3.7"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "FairCom Corporation", email = "support@faircom.com"}
 ]
@@ -16,7 +16,6 @@ keywords = ["sqlalchemy", "faircom", "database", "json-api", "db-api"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
@@ -41,10 +40,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://www.faircom.com"
-Documentation = "https://docs.faircom.com"
-Repository = "https://github.com/faircom/sqlalchemy-faircom"
-"Bug Tracker" = "https://github.com/faircom/sqlalchemy-faircom/issues"
+Homepage = "https://github.com/toddstoffel/sqlalchemy-faircom"
+Documentation = "https://github.com/toddstoffel/sqlalchemy-faircom"
+Repository = "https://github.com/toddstoffel/sqlalchemy-faircom"
+"Bug Tracker" = "https://github.com/toddstoffel/sqlalchemy-faircom/issues"
 
 [project.entry-points."sqlalchemy.dialects"]
 "faircom.jsonapi" = "faircom_jsonapi.sqlalchemy_dialect:FairComJSONDialect"

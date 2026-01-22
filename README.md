@@ -223,6 +223,14 @@ Some SQL keywords like "number" are reserved in FairCom. Use different column al
 
 ## Changelog
 
+### Version 0.1.11 (January 21, 2026)
+- **Fixed:** Raw SQL text queries with LIMIT now work (e.g., from Superset)
+- Added automatic LIMIT to TOP conversion in `Cursor.execute()` method
+- Handles multi-line SQL queries like `SELECT\n  *\nFROM table\nLIMIT 1001`
+- Fixes "Syntax error near or at" when Superset sends LIMIT queries
+- Conversion happens at DB-API level, before SQL reaches FairCom
+- Works alongside ORM's TOP generation in dialect
+
 ### Version 0.1.10 (January 21, 2026)
 - **Breaking Change:** Removed OFFSET/FETCH support due to FairCom database limitation
 - **Improved:** Clear error message when .offset() is used, guiding users to alternatives

@@ -42,6 +42,20 @@ class Cursor:
         """Execute a database operation (query or command)"""
         if parameters is None:
             parameters = []
+        
+        # CONVERT LIMIT TO TOP FOR FAIRCOM COMPATIBILITY
+        # FairCom does not support LIMIT syntax, only TOP
+        # This handles raw SQL queries from tools like Superset
+        limit_match = re.search(r'\s+LIMIT\s+(\d+)\s*$', operation, re.IGNORECASE | re.DOTALL)
+        
+        if limit_match:
+            limit_value = limit_match.group(1)
+            # Remove LIMIT clause
+            operation = re.sub(r'\s+LIMIT\s+\d+\s*$', '', operation, flags=re.IGNORECASE | re.DOTALL)
+            
+            # Add TOP if not already present
+            if not re.search(r'SELECT\s+TOP\s+\d+', operation, re.IGNORECASE):
+                operation = re.sub(r'(SELECT)\s+', rf'\1 TOP {limit_value} ', operation, count=1, flags=re.IGNORECASE)
             
         try:
             # Determine if this is a SELECT query or a DDL/DML statement

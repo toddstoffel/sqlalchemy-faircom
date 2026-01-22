@@ -9,8 +9,24 @@ from . import dbapi
 
 
 class FairComJSONCompiler(compiler.SQLCompiler):
-    """SQL compiler for FairCom"""
-    pass
+    """SQL compiler for FairCom - uses TOP syntax instead of LIMIT"""
+    
+    def limit_clause(self, select, **kwargs):
+        """FairCom uses TOP syntax, not LIMIT - return empty string"""
+        return ""
+    
+    def get_select_precolumns(self, select, **kwargs):
+        """Add TOP clause before column list"""
+        text = ""
+        
+        # Add TOP if we have a limit
+        if select._limit_clause is not None:
+            text += f"TOP {self.process(select._limit_clause, **kwargs)} "
+        
+        # Get any other precolumns from parent (like DISTINCT)
+        text += super().get_select_precolumns(select, **kwargs)
+        
+        return text
 
 
 class FairComJSONTypeCompiler(compiler.GenericTypeCompiler):

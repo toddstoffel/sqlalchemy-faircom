@@ -16,7 +16,7 @@ A pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API. T
 
 ## Installation
 
-### From PyPI (Coming Soon)
+### From PyPI
 
 ```bash
 pip install sqlalchemy-faircom
@@ -25,7 +25,7 @@ pip install sqlalchemy-faircom
 ### From Source
 
 ```bash
-git clone https://github.com/faircom/sqlalchemy-faircom.git
+git clone https://github.com/toddstoffel/sqlalchemy-faircom.git
 cd sqlalchemy-faircom
 pip install -e .
 ```
@@ -33,7 +33,7 @@ pip install -e .
 ### For Development
 
 ```bash
-git clone https://github.com/faircom/sqlalchemy-faircom.git
+git clone https://github.com/toddstoffel/sqlalchemy-faircom.git
 cd sqlalchemy-faircom
 pip install -e .[dev]
 pytest

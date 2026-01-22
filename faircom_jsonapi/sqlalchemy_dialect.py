@@ -17,22 +17,31 @@ class FairComJSONCompiler(compiler.SQLCompiler):
         
         # If we have OFFSET, we must use OFFSET...FETCH syntax (can't use TOP)
         if select._offset_clause is not None:
-            text = f"\nOFFSET {self.process(select._offset_clause, **kwargs)} ROWS"
+            # Render OFFSET as literal (FairCom doesn't support parameterized OFFSET/FETCH)
+            offset_literal = self.process(select._offset_clause, literal_binds=True, **kwargs)
+            text = f"\nOFFSET {offset_literal} ROWS"
             
             # Add FETCH if we have a limit
             if select._limit_clause is not None:
-                text += f" FETCH NEXT {self.process(select._limit_clause, **kwargs)} ROWS ONLY"
+                limit_literal = self.process(select._limit_clause, literal_binds=True, **kwargs)
+                text += f" FETCH NEXT {limit_literal} ROWS ONLY"
         
         # If no OFFSET, we use TOP syntax (handled in get_select_precolumns)
         return text
     
     def get_select_precolumns(self, select, **kwargs):
-        """Add TOP clause before column list (only when no OFFSET)"""
+        """Add TOP clause before column list (only when no OFFSET)
+        
+        NOTE: FairCom requires literal values in TOP clause, not bind parameters.
+        We render the limit value as a literal to avoid 'Syntax error near or at "?"'
+        """
         text = ""
         
         # Use TOP only if we have a limit WITHOUT offset
         if select._limit_clause is not None and select._offset_clause is None:
-            text += f"TOP {self.process(select._limit_clause, **kwargs)} "
+            # Render limit as literal (FairCom doesn't support parameterized TOP)
+            limit_literal = self.process(select._limit_clause, literal_binds=True, **kwargs)
+            text += f"TOP {limit_literal} "
         
         # Get any other precolumns from parent (like DISTINCT)
         text += super().get_select_precolumns(select, **kwargs)

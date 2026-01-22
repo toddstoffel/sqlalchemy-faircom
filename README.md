@@ -161,6 +161,17 @@ sqlalchemy-faircom/
 
 ## Limitations
 
+### Database Limitations
+
+- **OFFSET/FETCH Not Supported**: FairCom database does not support OFFSET/FETCH syntax. Use `.limit()` without `.offset()` for TOP-based pagination.
+  - ❌ Does NOT work: `query.limit(10).offset(5)` 
+  - ✅ Works: `query.limit(10)`
+  - **Workarounds**: Use cursor-based pagination or fetch larger result sets and paginate in application code
+
+- **Parameterized TOP Values**: FairCom requires literal integer values in TOP clauses (not bind parameters). This driver automatically extracts literal values from SQLAlchemy queries.
+
+### API Limitations
+
 - Read operations are fully supported
 - Write operations may have limited support (depends on JSON API capabilities)
 - Some advanced SQLAlchemy features may not be implemented
@@ -211,6 +222,36 @@ The driver currently disables SSL verification for HTTPS connections. For produc
 Some SQL keywords like "number" are reserved in FairCom. Use different column aliases if you encounter syntax errors.
 
 ## Changelog
+
+### Version 0.1.10 (January 21, 2026)
+- **Breaking Change:** Removed OFFSET/FETCH support due to FairCom database limitation
+- **Improved:** Clear error message when .offset() is used, guiding users to alternatives
+- **Documented:** Known limitation with OFFSET queries and recommended workarounds
+- OFFSET/FETCH syntax causes "Syntax error near or at" - not supported by FairCom database
+
+### Version 0.1.9 (January 21, 2026)
+- **Fixed:** CRITICAL FIX for parameterized TOP/OFFSET values
+- Implemented `_get_limit_or_offset_value()` helper method to extract literal integers
+- v0.1.8 fix didn't work - `literal_binds` parameter not valid for `self.process()`
+- Now generates `SELECT TOP 10` instead of `SELECT TOP ?`
+- Ready for Apache Superset integration with `.limit()` queries
+
+### Version 0.1.8 (January 21, 2026)
+- **Attempted Fix:** Tried to render TOP/OFFSET/FETCH as literals (didn't work)
+- Used `literal_binds=True` parameter approach (not valid)
+
+### Version 0.1.7 (January 21, 2026)
+- **Added:** Comprehensive T-SQL compatibility
+- OFFSET/FETCH syntax (now removed in v0.1.10 due to database limitation)
+- Boolean → BIT type mapping
+- IDENTITY for autoincrement columns
+- String concatenation with + operator
+
+### Version 0.1.6 (January 21, 2026)
+- **Added:** TOP syntax support for `.limit()` queries
+
+### Version 0.1.5 (January 21, 2026)
+- **Fixed:** dbapi classmethod interface for SQLAlchemy compatibility
 
 ### Version 0.1.3 (January 21, 2026)
 - **Fixed:** DDL/DML operations (CREATE, INSERT, UPDATE, DELETE) now work correctly

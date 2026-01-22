@@ -12,22 +12,22 @@ class FairComJSONCompiler(compiler.SQLCompiler):
     """SQL compiler for FairCom - uses T-SQL syntax (TOP, OFFSET/FETCH, etc.)"""
     
     def limit_clause(self, select, **kwargs):
-        """Handle T-SQL pagination: OFFSET...FETCH or return empty if using TOP
+        """Handle T-SQL pagination: Return empty (use TOP instead)
         
-        NOTE: FairCom requires literal integers for OFFSET/FETCH, not bind parameters.
+        NOTE: FairCom does NOT support OFFSET/FETCH syntax at all.
+        OFFSET queries will raise an error to guide users to use TOP-only pagination.
         """
         text = ""
         
-        # If we have OFFSET, we must use OFFSET...FETCH syntax (can't use TOP)
+        # FairCom does not support OFFSET/FETCH syntax - raise helpful error
         if select._offset_clause is not None:
-            # Extract the actual integer value from the offset clause
-            offset_value = self._get_limit_or_offset_value(select._offset_clause)
-            text = f"\nOFFSET {offset_value} ROWS"
-            
-            # Add FETCH if we have a limit
-            if select._limit_clause is not None:
-                limit_value = self._get_limit_or_offset_value(select._limit_clause)
-                text += f" FETCH NEXT {limit_value} ROWS ONLY"
+            from sqlalchemy.exc import CompileError
+            raise CompileError(
+                "FairCom database does not support OFFSET/FETCH syntax. "
+                "Use .limit() without .offset() for TOP-based pagination. "
+                "For paginated results, consider cursor-based pagination or "
+                "fetching larger result sets and paginating in application code."
+            )
         
         # If no OFFSET, we use TOP syntax (handled in get_select_precolumns)
         return text

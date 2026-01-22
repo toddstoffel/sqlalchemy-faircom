@@ -23,7 +23,11 @@ class FairComJSONDialect(default.DefaultDialect):
     
     name = 'faircom'
     driver = 'jsonapi'
-    dbapi = dbapi
+    
+    @classmethod
+    def dbapi(cls):
+        """Return the DB-API module"""
+        return dbapi
     
     # Enable statement caching for better performance
     supports_statement_cache = True

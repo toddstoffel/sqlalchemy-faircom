@@ -12,19 +12,22 @@ class FairComJSONCompiler(compiler.SQLCompiler):
     """SQL compiler for FairCom - uses T-SQL syntax (TOP, OFFSET/FETCH, etc.)"""
     
     def limit_clause(self, select, **kwargs):
-        """Handle T-SQL pagination: OFFSET...FETCH or return empty if using TOP"""
+        """Handle T-SQL pagination: OFFSET...FETCH or return empty if using TOP
+        
+        NOTE: FairCom requires literal integers for OFFSET/FETCH, not bind parameters.
+        """
         text = ""
         
         # If we have OFFSET, we must use OFFSET...FETCH syntax (can't use TOP)
         if select._offset_clause is not None:
-            # Render OFFSET as literal (FairCom doesn't support parameterized OFFSET/FETCH)
-            offset_literal = self.process(select._offset_clause, literal_binds=True, **kwargs)
-            text = f"\nOFFSET {offset_literal} ROWS"
+            # Extract the actual integer value from the offset clause
+            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            text = f"\nOFFSET {offset_value} ROWS"
             
             # Add FETCH if we have a limit
             if select._limit_clause is not None:
-                limit_literal = self.process(select._limit_clause, literal_binds=True, **kwargs)
-                text += f" FETCH NEXT {limit_literal} ROWS ONLY"
+                limit_value = self._get_limit_or_offset_value(select._limit_clause)
+                text += f" FETCH NEXT {limit_value} ROWS ONLY"
         
         # If no OFFSET, we use TOP syntax (handled in get_select_precolumns)
         return text
@@ -32,16 +35,53 @@ class FairComJSONCompiler(compiler.SQLCompiler):
     def get_select_precolumns(self, select, **kwargs):
         """Add TOP clause before column list (only when no OFFSET)
         
-        NOTE: FairCom requires literal values in TOP clause, not bind parameters.
-        We render the limit value as a literal to avoid 'Syntax error near or at "?"'
+        NOTE: FairCom requires literal integers in TOP clause, not bind parameters.
+        We extract the actual integer value to avoid 'Syntax error near or at "?"'
         """
         text = ""
         
         # Use TOP only if we have a limit WITHOUT offset
         if select._limit_clause is not None and select._offset_clause is None:
-            # Render limit as literal (FairCom doesn't support parameterized TOP)
-            limit_literal = self.process(select._limit_clause, literal_binds=True, **kwargs)
-            text += f"TOP {limit_literal} "
+            # Extract the actual integer value from the limit clause
+            limit_value = self._get_limit_or_offset_value(select._limit_clause)
+            text += f"TOP {limit_value} "
+        
+        # Get any other precolumns from parent (like DISTINCT)
+        text += super().get_select_precolumns(select, **kwargs)
+        
+        return text
+    
+    def _get_limit_or_offset_value(self, clause):
+        """Extract the literal integer value from a limit or offset clause.
+        
+        FairCom does not support parameterized TOP/OFFSET/FETCH values.
+        This method extracts the actual integer value from the clause object.
+        """
+        # Try to get the value directly
+        if hasattr(clause, 'value'):
+            return clause.value
+        
+        # Try effective_value (for some SQLAlchemy versions)
+        if hasattr(clause, 'effective_value'):
+            return clause.effective_value
+        
+        # If it's a BindParameter, get its value
+        if hasattr(clause, '_orig_val'):
+            return clause._orig_val
+        
+        # If it's already an integer, return it
+        if isinstance(clause, int):
+            return clause
+        
+        # Last resort: try to render it with literal_binds in a subcompiler
+        # Create a new compiler instance with literal_binds enabled
+        from sqlalchemy.sql import visitors
+        literal_compiler = self.__class__(
+            self.dialect,
+            None,
+            compile_kwargs={'literal_binds': True}
+        )
+        return literal_compiler.process(clause, **{'literal_binds': True})
         
         # Get any other precolumns from parent (like DISTINCT)
         text += super().get_select_precolumns(select, **kwargs)

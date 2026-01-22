@@ -59,10 +59,10 @@ faircom://username:password@host:port/database?protocol=http
 Create a `.env` file in your project root:
 
 ```env
-HOST=holly.local
+HOST=your-server.example.com
 PORT=6597
-USERNAME=ADMIN
-PASSWORD=ADMIN
+USERNAME=your_username
+PASSWORD=your_password
 ```
 
 **Note**: PORT in `.env` is for the SQL port. The JSON API typically runs on port 8080 (HTTP) or 8443 (HTTPS).
@@ -75,7 +75,7 @@ PASSWORD=ADMIN
 from sqlalchemy import create_engine, text
 
 # Create connection
-connection_string = 'faircom://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http'
+connection_string = 'faircom://username:password@your-server:8080/ctreeSQL?protocol=http'
 engine = create_engine(connection_string, echo=True)
 
 # Execute queries
@@ -109,10 +109,10 @@ from faircom_jsonapi.dbapi import connect
 
 # Connect to database
 conn = connect(
-    host='holly.local',
+    host='your-server.example.com',
     port=8080,
-    username='ADMIN',
-    password='ADMIN',
+    username='your_username',
+    password='your_password',
     database='ctreeSQL',
     protocol='http'
 )
@@ -170,7 +170,7 @@ Superset Test/
 This driver can be used with Apache Superset. Use the following connection string in Superset:
 
 ```
-faircom://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http
+faircom://username:password@your-server:8080/ctreeSQL?protocol=http
 ```
 
 ## Contributing

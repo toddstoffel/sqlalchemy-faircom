@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="faircom-jsonapi",
-    version="0.1.3",
+    version="0.1.4",
     description="SQLAlchemy dialect for FairCom Database via JSON API",
     long_description="Pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API",
     author="Custom Implementation",

@@ -23,6 +23,7 @@ class FairComJSONDialect(default.DefaultDialect):
     
     name = 'faircom'
     driver = 'jsonapi'
+    dbapi = dbapi
     
     # Enable statement caching for better performance
     supports_statement_cache = True

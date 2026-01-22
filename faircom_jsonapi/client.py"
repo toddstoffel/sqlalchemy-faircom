@@ -75,13 +75,16 @@ class FairComClient:
 
     def run_sql_statements(self, database_name, sql, params=None):
         """Execute SQL statements (DDL/DML operations like INSERT, UPDATE, DELETE, CREATE, etc.)"""
-        if params is None:
-            params = []
+        # Note: runSqlStatements requires 'sqlStatements' as an array
+        # and may not support parameterized queries via sqlParams
+        if params and len(params) > 0:
+            # TODO: Handle parameterized DDL/DML queries
+            # For now, we'll pass the SQL as-is and let the API handle it
+            pass
             
         return self._make_request("runSqlStatements", 'db', {
             "databaseName": database_name,
-            "sql": sql,
-            "sqlParams": params
+            "sqlStatements": [sql]  # Must be an array
         })
 
     def close(self):

@@ -46,7 +46,7 @@ Repository = "https://github.com/toddstoffel/sqlalchemy-faircom"
 "Bug Tracker" = "https://github.com/toddstoffel/sqlalchemy-faircom/issues"
 
 [project.entry-points."sqlalchemy.dialects"]
-"faircom.jsonapi" = "faircom_jsonapi.sqlalchemy_dialect:FairComJSONDialect"
+faircom = "faircom_jsonapi.sqlalchemy_dialect:FairComJSONDialect"
 
 [tool.setuptools.packages.find]
 where = ["."]

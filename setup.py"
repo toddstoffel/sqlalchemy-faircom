@@ -17,7 +17,7 @@ setup(
     ],
     entry_points={
         "sqlalchemy.dialects": [
-            "faircom.jsonapi = faircom_jsonapi.sqlalchemy_dialect:FairComJSONDialect",
+            "faircom = faircom_jsonapi.sqlalchemy_dialect:FairComJSONDialect",
         ]
     },
     python_requires='>=3.7',

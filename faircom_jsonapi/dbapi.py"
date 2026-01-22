@@ -44,11 +44,24 @@ class Cursor:
             parameters = []
             
         try:
-            result = self.connection.client.execute_sql(
-                self.connection.database,
-                operation,
-                parameters
-            )
+            # Determine if this is a SELECT query or a DDL/DML statement
+            sql_upper = operation.strip().upper()
+            is_select = sql_upper.startswith('SELECT') or sql_upper.startswith('WITH')
+            
+            if is_select:
+                # Use getRecordsUsingSQL for SELECT queries
+                result = self.connection.client.execute_sql(
+                    self.connection.database,
+                    operation,
+                    parameters
+                )
+            else:
+                # Use runSqlStatements for DDL/DML (INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, etc.)
+                result = self.connection.client.run_sql_statements(
+                    self.connection.database,
+                    operation,
+                    parameters
+                )
             
             # Build description from fields
             fields = result.get('fields', [])
@@ -71,7 +84,8 @@ class Cursor:
             # Store results
             self._results = result.get('data', [])
             self._result_index = 0
-            self.rowcount = result.get('returnedRecordCount', len(self._results))
+            # For DDL/DML operations, use affectedRecordCount if available
+            self.rowcount = result.get('affectedRecordCount', result.get('returnedRecordCount', len(self._results)))
             
         except FairComClientException as e:
             raise DatabaseError(str(e))

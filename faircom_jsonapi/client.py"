@@ -63,11 +63,22 @@ class FairComClient:
         return result
 
     def execute_sql(self, database_name, sql, params=None):
-        """Execute SQL query and return results"""
+        """Execute SQL query and return results (SELECT statements only)"""
         if params is None:
             params = []
             
         return self._make_request("getRecordsUsingSQL", 'db', {
+            "databaseName": database_name,
+            "sql": sql,
+            "sqlParams": params
+        })
+
+    def run_sql_statements(self, database_name, sql, params=None):
+        """Execute SQL statements (DDL/DML operations like INSERT, UPDATE, DELETE, CREATE, etc.)"""
+        if params is None:
+            params = []
+            
+        return self._make_request("runSqlStatements", 'db', {
             "databaseName": database_name,
             "sql": sql,
             "sqlParams": params

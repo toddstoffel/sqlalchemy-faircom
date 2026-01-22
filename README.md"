@@ -42,7 +42,7 @@ pytest
 ## Connection String Format
 
 ```
-faircom+jsonapi://username:password@host:port/database?protocol=http
+faircom://username:password@host:port/database?protocol=http
 ```
 
 ### Parameters
@@ -75,7 +75,7 @@ PASSWORD=ADMIN
 from sqlalchemy import create_engine, text
 
 # Create connection
-connection_string = 'faircom+jsonapi://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http'
+connection_string = 'faircom://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http'
 engine = create_engine(connection_string, echo=True)
 
 # Execute queries
@@ -93,7 +93,7 @@ from sqlalchemy import create_engine, text
 
 load_dotenv()
 
-connection_string = f"faircom+jsonapi://{os.getenv('USERNAME')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:8080/ctreeSQL?protocol=http"
+connection_string = f"faircom://{os.getenv('USERNAME')}:{os.getenv('PASSWORD')}@{os.getenv('HOST')}:8080/ctreeSQL?protocol=http"
 engine = create_engine(connection_string)
 
 with engine.connect() as conn:
@@ -170,7 +170,7 @@ Superset Test/
 This driver can be used with Apache Superset. Use the following connection string in Superset:
 
 ```
-faircom+jsonapi://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http
+faircom://ADMIN:ADMIN@holly.local:8080/ctreeSQL?protocol=http
 ```
 
 ## Contributing

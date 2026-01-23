@@ -69,3 +69,4 @@ Thumbs.db
 # Project specific
 *.log
 .git/refs/original/
+debug_scratch/

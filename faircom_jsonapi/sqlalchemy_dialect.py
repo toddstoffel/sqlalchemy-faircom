@@ -34,20 +34,26 @@ class FairComJSONCompiler(compiler.SQLCompiler):
         """
         text = ""
         
+        # Important: Force kwargs to use literal_binds to get actual values
+        # This ensures we render literals instead of bind parameters
+        render_kwargs = kwargs.copy()
+        render_kwargs['literal_binds'] = True
+        
         # Handle LIMIT and OFFSET together (pagination)
         if select._limit_clause is not None and select._offset_clause is not None:
-            limit_value = self._get_limit_or_offset_value(select._limit_clause)
-            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            # Process the clauses to get their literal values
+            limit_value = self.process(select._limit_clause, **render_kwargs)
+            offset_value = self.process(select._offset_clause, **render_kwargs)
             text += f"TOP {limit_value} SKIP {offset_value} "
         
         # Handle LIMIT only (no OFFSET)
         elif select._limit_clause is not None:
-            limit_value = self._get_limit_or_offset_value(select._limit_clause)
+            limit_value = self.process(select._limit_clause, **render_kwargs)
             text += f"TOP {limit_value} "
         
         # Handle OFFSET only (no LIMIT)
         elif select._offset_clause is not None:
-            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            offset_value = self.process(select._offset_clause, **render_kwargs)
             text += f"SKIP {offset_value} "
         
         # Get any other precolumns from parent (like DISTINCT)
@@ -162,8 +168,9 @@ class FairComJSONDialect(default.DefaultDialect):
         """Return the DB-API module"""
         return dbapi
     
-    # Enable statement caching for better performance
-    supports_statement_cache = True
+    # Disable statement caching to prevent limit/offset values from being cached
+    # FairCom requires literal integers in TOP/SKIP, and caching interferes with this
+    supports_statement_cache = False
     
     supports_alter = True
     supports_unicode_statements = True

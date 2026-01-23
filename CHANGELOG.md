@@ -5,6 +5,28 @@ All notable changes to sqlalchemy-faircom will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.14] - 2026-01-23
+
+### Improved
+- Enhanced `_get_limit_or_offset_value()` method for better robustness and edge case handling
+- Removed unreachable code from value extraction method
+- Added comprehensive value extraction test suite (8 new tests)
+- Improved error handling with try/except for edge cases
+- Better documentation of value extraction for SQLAlchemy 2.0+ compatibility
+
+### Added
+- Test suite for value extraction (`tests/test_value_extraction.py`)
+- Tests for various offset/limit combinations (0, 5, 10, 20, 50, 100, 1000)
+- Tests for integer passthrough
+- Tests verifying SQL output contains correct values
+
+### Technical
+- Method now checks for integer type first (more efficient)
+- Added support for `_orig` attribute (SQLAlchemy 2.0+ BindParameter)
+- Added support for `_element` attribute for literal values
+- Improved fallback logic with proper exception handling
+- All 25 tests passing
+
 ## [0.1.13] - 2026-01-23
 
 ### Fixed

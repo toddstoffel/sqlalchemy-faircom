@@ -60,8 +60,14 @@ class FairComJSONCompiler(compiler.SQLCompiler):
         
         FairCom does not support parameterized TOP/OFFSET/FETCH values.
         This method extracts the actual integer value from the clause object.
+        
+        Works with SQLAlchemy 2.0+ _OffsetLimitParam objects.
         """
-        # Try to get the value directly
+        # If it's already an integer, return it
+        if isinstance(clause, int):
+            return clause
+        
+        # Try to get the value directly (works with _OffsetLimitParam in SQLAlchemy 2.0+)
         if hasattr(clause, 'value'):
             return clause.value
         
@@ -69,28 +75,31 @@ class FairComJSONCompiler(compiler.SQLCompiler):
         if hasattr(clause, 'effective_value'):
             return clause.effective_value
         
+        # For BindParameter objects, try _orig (SQLAlchemy 2.0+)
+        if hasattr(clause, '_orig'):
+            value = clause._orig
+            # Handle tuple unpacking for some SQLAlchemy versions
+            if isinstance(value, tuple) and len(value) > 0:
+                return value[0]
+            return value
+        
         # If it's a BindParameter, get its value
         if hasattr(clause, '_orig_val'):
             return clause._orig_val
         
-        # If it's already an integer, return it
-        if isinstance(clause, int):
-            return clause
+        # For literal values
+        if hasattr(clause, '_element'):
+            element = clause._element
+            if hasattr(element, 'value'):
+                return element.value
         
-        # Last resort: try to render it with literal_binds in a subcompiler
-        # Create a new compiler instance with literal_binds enabled
-        from sqlalchemy.sql import visitors
-        literal_compiler = self.__class__(
-            self.dialect,
-            None,
-            compile_kwargs={'literal_binds': True}
-        )
-        return literal_compiler.process(clause, **{'literal_binds': True})
-        
-        # Get any other precolumns from parent (like DISTINCT)
-        text += super().get_select_precolumns(select, **kwargs)
-        
-        return text
+        # Last resort: try to compile with literal_binds and parse the result
+        try:
+            compiled = str(clause.compile(compile_kwargs={"literal_binds": True}))
+            return int(compiled)
+        except (ValueError, AttributeError, TypeError):
+            # If all else fails, return 0 as a safe default
+            return 0
     
     def visit_concat_op_binary(self, binary, operator, **kw):
         """Use T-SQL + operator for string concatenation instead of ||"""

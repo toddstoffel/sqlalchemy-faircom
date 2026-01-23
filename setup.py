@@ -9,7 +9,7 @@ setup(
     description="SQLAlchemy dialect for FairCom Database via JSON API",
     long_description="Pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API",
     author="Custom Implementation",
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
         'sqlalchemy>=1.4',
         'requests>=2.25.0',

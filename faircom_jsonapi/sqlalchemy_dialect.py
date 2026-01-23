@@ -12,43 +12,43 @@ class FairComJSONCompiler(compiler.SQLCompiler):
     """SQL compiler for FairCom - uses T-SQL syntax (TOP, SKIP, etc.)"""
     
     def limit_clause(self, select, **kwargs):
-        """Handle FairCom pagination using SKIP syntax
+        """Override to return empty string - we handle everything in get_select_precolumns
         
-        FairCom uses SKIP instead of OFFSET for pagination.
-        - LIMIT without OFFSET: Use TOP clause (handled in get_select_precolumns)
-        - LIMIT with OFFSET: Use SKIP n FETCH FIRST m ROWS ONLY
-        - OFFSET without LIMIT: Use SKIP n
+        FairCom requires TOP and SKIP to appear in the SELECT clause before the column list,
+        not at the end of the query. All pagination logic is handled in get_select_precolumns().
         """
-        text = ""
-        
-        # Handle OFFSET using SKIP syntax
-        if select._offset_clause is not None:
-            offset_value = self._get_limit_or_offset_value(select._offset_clause)
-            text += f"\nSKIP {offset_value}"
-            
-            # If we have a LIMIT with OFFSET, add FETCH clause
-            if select._limit_clause is not None:
-                limit_value = self._get_limit_or_offset_value(select._limit_clause)
-                text += f" FETCH FIRST {limit_value} ROWS ONLY"
-        
-        return text
+        # FairCom uses TOP/SKIP in the SELECT clause, not at the end
+        return ""
     
     def get_select_precolumns(self, select, **kwargs):
-        """Add TOP clause before column list (only when no SKIP/OFFSET)
+        """Add TOP and SKIP clauses before column list
         
-        NOTE: FairCom requires literal integers in TOP clause, not bind parameters.
+        FairCom requires: SELECT [TOP n] [SKIP m] * FROM table
+        Both TOP and SKIP must come before the column list.
+        
+        According to FairCom SQL Reference Guide:
+        SELECT [ ALL | DISTINCT ] [ SKIP N ] [ TOP N ] { * | column_list } FROM ...
+        
+        NOTE: FairCom requires literal integers in TOP/SKIP clauses, not bind parameters.
         We extract the actual integer value to avoid 'Syntax error near or at "?"'
-        
-        TOP is only used when there's a LIMIT without OFFSET.
-        When OFFSET is present, we use SKIP...FETCH instead.
         """
         text = ""
         
-        # Use TOP only if we have a limit WITHOUT offset
-        if select._limit_clause is not None and select._offset_clause is None:
-            # Extract the actual integer value from the limit clause
+        # Handle LIMIT and OFFSET together (pagination)
+        if select._limit_clause is not None and select._offset_clause is not None:
+            limit_value = self._get_limit_or_offset_value(select._limit_clause)
+            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            text += f"TOP {limit_value} SKIP {offset_value} "
+        
+        # Handle LIMIT only (no OFFSET)
+        elif select._limit_clause is not None:
             limit_value = self._get_limit_or_offset_value(select._limit_clause)
             text += f"TOP {limit_value} "
+        
+        # Handle OFFSET only (no LIMIT)
+        elif select._offset_clause is not None:
+            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            text += f"SKIP {offset_value} "
         
         # Get any other precolumns from parent (like DISTINCT)
         text += super().get_select_precolumns(select, **kwargs)

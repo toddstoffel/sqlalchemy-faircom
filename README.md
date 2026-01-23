@@ -157,32 +157,43 @@ sqlalchemy-faircom/
 
 - Python 3.7+
 - SQLAlchemy 1.4+
-- Works with any tool that uses SQLAlchemy (e.g., Apache Superset, Pandas, etc.)
+- ✅ **Apache Superset** - Full pagination support
+- Works with any tool that uses SQLAlchemy (e.g., Pandas, Jupyter notebooks, etc.)
+
+## Pagination Support
+
+FairCom uses **SKIP** syntax instead of the standard OFFSET. This driver automatically converts SQLAlchemy pagination:
+
+- **LIMIT only**: Generates `SELECT TOP n ...` (optimized)
+  ```python
+  query.limit(10)  # → SELECT TOP 10 ...
+  ```
+
+- **LIMIT + OFFSET**: Generates `SELECT ... SKIP n FETCH FIRST m ROWS ONLY`
+  ```python
+  query.limit(10).offset(20)  # → SELECT ... SKIP 20 FETCH FIRST 10 ROWS ONLY
+  ```
+
+- **OFFSET only**: Generates `SELECT ... SKIP n`
+  ```python
+  query.offset(5)  # → SELECT ... SKIP 5
+  ```
+
+### Apache Superset Compatibility
+
+✅ **Full pagination support** - Apache Superset's data exploration features work seamlessly with this driver. The automatic OFFSET→SKIP conversion ensures all Superset queries execute correctly.
 
 ## Limitations
 
 ### Database Limitations
 
-- **OFFSET/FETCH Not Supported**: FairCom database does not support OFFSET/FETCH syntax. Use `.limit()` without `.offset()` for TOP-based pagination.
-  - ❌ Does NOT work: `query.limit(10).offset(5)` 
-  - ✅ Works: `query.limit(10)`
-  - **Workarounds**: Use cursor-based pagination or fetch larger result sets and paginate in application code
-
-- **Parameterized TOP Values**: FairCom requires literal integer values in TOP clauses (not bind parameters). This driver automatically extracts literal values from SQLAlchemy queries.
+- **Parameterized TOP/SKIP Values**: FairCom requires literal integer values in TOP and SKIP clauses (not bind parameters). This driver automatically extracts literal values from SQLAlchemy queries.
 
 ### API Limitations
 
 - Read operations are fully supported
 - Write operations may have limited support (depends on JSON API capabilities)
 - Some advanced SQLAlchemy features may not be implemented
-
-## For Superset Integration
-
-This driver can be used with Apache Superset. Use the following connection string in Superset:
-
-```
-faircom://username:password@your-server:8080/ctreeSQL?protocol=http
-```
 
 ## Contributing
 

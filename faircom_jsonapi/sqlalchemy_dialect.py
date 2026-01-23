@@ -9,34 +9,38 @@ from . import dbapi
 
 
 class FairComJSONCompiler(compiler.SQLCompiler):
-    """SQL compiler for FairCom - uses T-SQL syntax (TOP, OFFSET/FETCH, etc.)"""
+    """SQL compiler for FairCom - uses T-SQL syntax (TOP, SKIP, etc.)"""
     
     def limit_clause(self, select, **kwargs):
-        """Handle T-SQL pagination: Return empty (use TOP instead)
+        """Handle FairCom pagination using SKIP syntax
         
-        NOTE: FairCom does NOT support OFFSET/FETCH syntax at all.
-        OFFSET queries will raise an error to guide users to use TOP-only pagination.
+        FairCom uses SKIP instead of OFFSET for pagination.
+        - LIMIT without OFFSET: Use TOP clause (handled in get_select_precolumns)
+        - LIMIT with OFFSET: Use SKIP n FETCH FIRST m ROWS ONLY
+        - OFFSET without LIMIT: Use SKIP n
         """
         text = ""
         
-        # FairCom does not support OFFSET/FETCH syntax - raise helpful error
+        # Handle OFFSET using SKIP syntax
         if select._offset_clause is not None:
-            from sqlalchemy.exc import CompileError
-            raise CompileError(
-                "FairCom database does not support OFFSET/FETCH syntax. "
-                "Use .limit() without .offset() for TOP-based pagination. "
-                "For paginated results, consider cursor-based pagination or "
-                "fetching larger result sets and paginating in application code."
-            )
+            offset_value = self._get_limit_or_offset_value(select._offset_clause)
+            text += f"\nSKIP {offset_value}"
+            
+            # If we have a LIMIT with OFFSET, add FETCH clause
+            if select._limit_clause is not None:
+                limit_value = self._get_limit_or_offset_value(select._limit_clause)
+                text += f" FETCH FIRST {limit_value} ROWS ONLY"
         
-        # If no OFFSET, we use TOP syntax (handled in get_select_precolumns)
         return text
     
     def get_select_precolumns(self, select, **kwargs):
-        """Add TOP clause before column list (only when no OFFSET)
+        """Add TOP clause before column list (only when no SKIP/OFFSET)
         
         NOTE: FairCom requires literal integers in TOP clause, not bind parameters.
         We extract the actual integer value to avoid 'Syntax error near or at "?"'
+        
+        TOP is only used when there's a LIMIT without OFFSET.
+        When OFFSET is present, we use SKIP...FETCH instead.
         """
         text = ""
         

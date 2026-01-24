@@ -5,6 +5,23 @@ All notable changes to sqlalchemy-faircom will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.17] - 2026-01-23
+
+### Added
+- **Table Reflection Support**: Implemented SQLAlchemy reflection API for automatic table discovery
+  - `get_schema_names()`: Returns default schema (None) since FairCom doesn't use schemas
+  - `get_table_names()`: Queries `admin.systables` to list all user tables in database
+  - `get_columns()`: Introspects table structure by querying table directly
+  - `has_table()`: Checks if a table exists by attempting to query it
+- **Apache Superset Integration**: Superset can now browse and select tables automatically in the dataset UI
+
+### Technical Details
+- Uses FairCom's `admin.systables` system catalog (`SELECT tbl FROM admin.systables WHERE tbltype = 'T'`)
+- Column introspection done via `SELECT TOP 1 *` to get column names from cursor description
+- All column types default to VARCHAR(255) since FairCom JSON API doesn't provide detailed type metadata
+- Methods properly handle SQLAlchemy 2.x requirements (wrapping SQL in `text()`)
+- Fixed method signatures to accept **kw parameter for SQLAlchemy compatibility
+
 ## [0.1.14] - 2026-01-23
 
 ### Improved

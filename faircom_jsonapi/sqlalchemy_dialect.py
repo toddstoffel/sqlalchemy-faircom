@@ -5,6 +5,7 @@ Allows SQLAlchemy to connect via the JSON API instead of native libraries
 from sqlalchemy.engine import default
 from sqlalchemy.sql import compiler
 from sqlalchemy import types as sqltypes
+from sqlalchemy import text
 from . import dbapi
 
 
@@ -126,6 +127,61 @@ class FairComJSONDialect(default.DefaultDialect):
     def do_commit(self, dbapi_connection):
         """Commit implementation"""
         pass
+    
+    def get_schema_names(self, connection, **kw):
+        """Return a list of schema names available in the database.
+        FairCom doesn't have schemas, so return None (default schema)."""
+        return [None]
+    
+    def get_table_names(self, connection, schema=None, **kw):
+        """Return a list of table names for the given schema.
+        
+        FairCom uses admin.systables to store table metadata.
+        """
+        try:
+            result = connection.execute(
+                text("SELECT tbl FROM admin.systables WHERE tbltype = 'T' ORDER BY tbl")
+            )
+            return [row[0] for row in result]
+        except Exception:
+            # If query fails, return empty list
+            return []
+    
+    def get_columns(self, connection, table_name, schema=None, **kw):
+        """Return column information for the given table.
+        
+        Query the table directly to introspect column structure.
+        """
+        try:
+            # Query one row to get column structure
+            result = connection.execute(text(f"SELECT TOP 1 * FROM {table_name}"))
+            
+            # Get column names from cursor description
+            columns = []
+            if hasattr(result, 'cursor') and hasattr(result.cursor, 'description'):
+                for col_desc in result.cursor.description:
+                    col_name = col_desc[0]
+                    
+                    columns.append({
+                        'name': col_name,
+                        'type': sqltypes.VARCHAR(length=255),  # Default type
+                        'nullable': True,
+                        'default': None
+                    })
+            
+            return columns
+        except Exception as e:
+            # Table doesn't exist or can't be queried
+            return []
+    
+    def has_table(self, connection, table_name, schema=None, **kw):
+        """Check if a table exists."""
+        # Try to query the table directly - if it exists, no error
+        try:
+            connection.execute(text(f"SELECT TOP 1 * FROM {table_name}"))
+            return True
+        except Exception:
+            return False
 
 
 # Register the dialect with SQLAlchemy

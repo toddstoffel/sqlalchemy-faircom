@@ -118,6 +118,8 @@ Once connected, you can use SQL Lab to query your FairCom database:
 SELECT * FROM employees LIMIT 100
 ```
 
+![SQL Lab Example](images/sqllab.png)
+
 ### SQL Compatibility Notes
 
 The `sqlalchemy-faircom` connector automatically handles SQL dialect differences:
@@ -156,6 +158,8 @@ Use Superset's chart builder to visualize your FairCom data:
 - Customize styling
 
 ### Step 3: Add to Dashboard
+
+![Chart Example](images/chart.png)
 
 Once your chart is saved, add it to a dashboard for monitoring and analysis.
 

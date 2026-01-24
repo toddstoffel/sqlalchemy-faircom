@@ -9,103 +9,14 @@ from . import dbapi
 
 
 class FairComJSONCompiler(compiler.SQLCompiler):
-    """SQL compiler for FairCom - uses T-SQL syntax (TOP, SKIP, etc.)"""
+    """SQL compiler for FairCom - generates standard SQL with LIMIT/OFFSET
     
-    def limit_clause(self, select, **kwargs):
-        """Override to return empty string - we handle everything in get_select_precolumns
-        
-        FairCom requires TOP and SKIP to appear in the SELECT clause before the column list,
-        not at the end of the query. All pagination logic is handled in get_select_precolumns().
-        """
-        # FairCom uses TOP/SKIP in the SELECT clause, not at the end
-        return ""
+    The dbapi layer (dbapi.py) automatically converts LIMIT to TOP for FairCom compatibility.
+    This keeps the dialect simple and compatible with SQL parsing tools like Superset.
+    """
     
-    def get_select_precolumns(self, select, **kwargs):
-        """Add TOP and SKIP clauses before column list
-        
-        FairCom requires: SELECT [TOP n] [SKIP m] * FROM table
-        Both TOP and SKIP must come before the column list.
-        
-        According to FairCom SQL Reference Guide:
-        SELECT [ ALL | DISTINCT ] [ SKIP N ] [ TOP N ] { * | column_list } FROM ...
-        
-        NOTE: FairCom requires literal integers in TOP/SKIP clauses, not bind parameters.
-        We extract the actual integer value to avoid 'Syntax error near or at "?"'
-        """
-        text = ""
-        
-        # Important: Force kwargs to use literal_binds to get actual values
-        # This ensures we render literals instead of bind parameters
-        render_kwargs = kwargs.copy()
-        render_kwargs['literal_binds'] = True
-        
-        # Handle LIMIT and OFFSET together (pagination)
-        if select._limit_clause is not None and select._offset_clause is not None:
-            # Process the clauses to get their literal values
-            limit_value = self.process(select._limit_clause, **render_kwargs)
-            offset_value = self.process(select._offset_clause, **render_kwargs)
-            text += f"TOP {limit_value} SKIP {offset_value} "
-        
-        # Handle LIMIT only (no OFFSET)
-        elif select._limit_clause is not None:
-            limit_value = self.process(select._limit_clause, **render_kwargs)
-            text += f"TOP {limit_value} "
-        
-        # Handle OFFSET only (no LIMIT)
-        elif select._offset_clause is not None:
-            offset_value = self.process(select._offset_clause, **render_kwargs)
-            text += f"SKIP {offset_value} "
-        
-        # Get any other precolumns from parent (like DISTINCT)
-        text += super().get_select_precolumns(select, **kwargs)
-        
-        return text
-    
-    def _get_limit_or_offset_value(self, clause):
-        """Extract the literal integer value from a limit or offset clause.
-        
-        FairCom does not support parameterized TOP/OFFSET/FETCH values.
-        This method extracts the actual integer value from the clause object.
-        
-        Works with SQLAlchemy 2.0+ _OffsetLimitParam objects.
-        """
-        # If it's already an integer, return it
-        if isinstance(clause, int):
-            return clause
-        
-        # Try to get the value directly (works with _OffsetLimitParam in SQLAlchemy 2.0+)
-        if hasattr(clause, 'value'):
-            return clause.value
-        
-        # Try effective_value (for some SQLAlchemy versions)
-        if hasattr(clause, 'effective_value'):
-            return clause.effective_value
-        
-        # For BindParameter objects, try _orig (SQLAlchemy 2.0+)
-        if hasattr(clause, '_orig'):
-            value = clause._orig
-            # Handle tuple unpacking for some SQLAlchemy versions
-            if isinstance(value, tuple) and len(value) > 0:
-                return value[0]
-            return value
-        
-        # If it's a BindParameter, get its value
-        if hasattr(clause, '_orig_val'):
-            return clause._orig_val
-        
-        # For literal values
-        if hasattr(clause, '_element'):
-            element = clause._element
-            if hasattr(element, 'value'):
-                return element.value
-        
-        # Last resort: try to compile with literal_binds and parse the result
-        try:
-            compiled = str(clause.compile(compile_kwargs={"literal_binds": True}))
-            return int(compiled)
-        except (ValueError, AttributeError, TypeError):
-            # If all else fails, return 0 as a safe default
-            return 0
+    # Use default SQLCompiler behavior for LIMIT/OFFSET
+    # The dbapi.Cursor.execute() method handles conversion to TOP/SKIP syntax
     
     def visit_concat_op_binary(self, binary, operator, **kw):
         """Use T-SQL + operator for string concatenation instead of ||"""

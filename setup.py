@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="sqlalchemy-faircom",
-    version="0.1.15",
+    version="0.1.16",
     description="SQLAlchemy dialect for FairCom Database via JSON API",
     long_description="Pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API",
     author="Custom Implementation",
@@ -13,7 +13,8 @@ setup(
     install_requires=[
         'sqlalchemy>=1.4',
         'requests>=2.25.0',
-        'python-dotenv>=0.19.0'
+        'python-dotenv>=0.19.0',
+        'sqlparse>=0.4.0'
     ],
     entry_points={
         "sqlalchemy.dialects": [

@@ -4,6 +4,9 @@ This allows the driver to work with SQLAlchemy and other tools expecting DB-API 
 """
 from .client import FairComClient, FairComClientException
 import re
+import sqlparse
+from sqlparse.sql import Token, TokenList
+from sqlparse.tokens import Keyword
 
 # DB-API 2.0 module attributes
 apilevel = '2.0'
@@ -37,25 +40,98 @@ class Cursor:
         self._results = []
         self._result_index = 0
         self.arraysize = 1
+    
+    def _convert_limit_to_top(self, sql):
+        """Convert LIMIT/OFFSET to TOP/SKIP using proper SQL parsing.
+        
+        This uses sqlparse to properly handle nested queries, comments, and strings.
+        Much more robust than regex-based approaches.
+        """
+        import sys
+        
+        # Parse the SQL into tokens
+        parsed = sqlparse.parse(sql)
+        if not parsed:
+            return sql
+        
+        # Process each statement (usually just one)
+        converted_statements = []
+        for statement in parsed:
+            converted = self._convert_statement_limit_to_top(statement)
+            converted_statements.append(str(converted))
+        
+        return ''.join(converted_statements)
+    
+    def _convert_statement_limit_to_top(self, statement):
+        """Recursively convert LIMIT/OFFSET in a SQL statement."""
+        import sys
+        
+        # Find LIMIT and OFFSET values by scanning tokens
+        limit_value = None
+        offset_value = None
+        
+        tokens = list(statement.flatten())
+        for i, token in enumerate(tokens):
+            if token.ttype is Keyword and token.value.upper() == 'LIMIT':
+                # Next non-whitespace token should be the limit value
+                for j in range(i + 1, len(tokens)):
+                    if not tokens[j].is_whitespace:
+                        limit_value = tokens[j].value
+                        break
+            elif token.ttype is Keyword and token.value.upper() == 'OFFSET':
+                # Next non-whitespace token should be the offset value
+                for j in range(i + 1, len(tokens)):
+                    if not tokens[j].is_whitespace:
+                        offset_value = tokens[j].value
+                        break
+        
+        # If we found LIMIT, convert to TOP
+        if limit_value:
+            # Rebuild the SQL
+            sql_str = str(statement)
+            
+            # Find SELECT keyword and insert TOP after it
+            select_match = re.search(r'\bSELECT\b', sql_str, re.IGNORECASE)
+            if select_match:
+                select_pos = select_match.end()
+                
+                # Build the TOP/SKIP clause
+                if offset_value:
+                    top_clause = f" TOP {limit_value} SKIP {offset_value}"
+                    print(f"[DBAPI] Converted LIMIT {limit_value} OFFSET {offset_value} to TOP/SKIP", file=sys.stderr)
+                else:
+                    top_clause = f" TOP {limit_value}"
+                    print(f"[DBAPI] Converted LIMIT {limit_value} to TOP", file=sys.stderr)
+                
+                # Remove LIMIT and OFFSET clauses from the end
+                sql_str = re.sub(r'\s+LIMIT\s+\d+', '', sql_str, flags=re.IGNORECASE)
+                sql_str = re.sub(r'\s+OFFSET\s+\d+', '', sql_str, flags=re.IGNORECASE)
+                
+                # Insert TOP clause after SELECT
+                sql_str = sql_str[:select_pos] + top_clause + sql_str[select_pos:]
+                
+                return sqlparse.parse(sql_str)[0]
+        
+        return statement
 
     def execute(self, operation, parameters=None):
         """Execute a database operation (query or command)"""
         if parameters is None:
             parameters = []
         
-        # CONVERT LIMIT TO TOP FOR FAIRCOM COMPATIBILITY
-        # FairCom does not support LIMIT syntax, only TOP
-        # This handles raw SQL queries from tools like Superset
-        limit_match = re.search(r'\s+LIMIT\s+(\d+)\s*$', operation, re.IGNORECASE | re.DOTALL)
+        # Log original SQL for debugging
+        import sys
+        print(f"[DBAPI] ===== ORIGINAL SQL =====", file=sys.stderr)
+        print(operation, file=sys.stderr)
+        print(f"[DBAPI] ===== END ORIGINAL =====", file=sys.stderr)
         
-        if limit_match:
-            limit_value = limit_match.group(1)
-            # Remove LIMIT clause
-            operation = re.sub(r'\s+LIMIT\s+\d+\s*$', '', operation, flags=re.IGNORECASE | re.DOTALL)
-            
-            # Add TOP if not already present
-            if not re.search(r'SELECT\s+TOP\s+\d+', operation, re.IGNORECASE):
-                operation = re.sub(r'(SELECT)\s+', rf'\1 TOP {limit_value} ', operation, count=1, flags=re.IGNORECASE)
+        # CONVERT LIMIT/OFFSET TO TOP/SKIP FOR FAIRCOM COMPATIBILITY
+        # Use proper SQL parsing instead of fragile regex
+        operation = self._convert_limit_to_top(operation)
+        
+        print(f"[DBAPI] ===== FINAL SQL =====", file=sys.stderr)
+        print(operation, file=sys.stderr)
+        print(f"[DBAPI] ===== END FINAL =====", file=sys.stderr)
             
         try:
             # Determine if this is a SELECT query or a DDL/DML statement

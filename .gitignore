@@ -70,3 +70,4 @@ Thumbs.db
 *.log
 .git/refs/original/
 debug_scratch/
+.github/copilot-instructions.md

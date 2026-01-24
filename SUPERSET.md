@@ -73,15 +73,15 @@ Always verify your credentials match the exact case configured in your FairCom s
 
 ### Step 2: Select Database Type
 
-- **Display Name**: Enyour-server.example.com:8080/your_database?protocol=http
-```
-
-Replace `your-server.example.com`, `8080`, and `your_database` with your actual FairCom server details.*SQLAlchemy URI**: Enter your connection string
+- **Display Name**: Enter a friendly name (e.g., "FairCom Production")
+- **SQLAlchemy URI**: Enter your connection string
 
 Example:
 ```
-faircom://ADMIN:ADMIN@holly.local:8080/test_emp_v4?protocol=http
+faircom://ADMIN:ADMIN@your-server.example.com:8080/your_database?protocol=http
 ```
+
+Replace `your-server.example.com`, `8080`, and `your_database` with your actual FairCom server details.
 
 ### Step 3: Test Connection
 

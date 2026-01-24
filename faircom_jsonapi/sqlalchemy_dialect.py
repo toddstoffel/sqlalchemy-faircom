@@ -136,11 +136,13 @@ class FairComJSONDialect(default.DefaultDialect):
     def get_table_names(self, connection, schema=None, **kw):
         """Return a list of table names for the given schema.
         
-        FairCom uses admin.systables to store table metadata.
+        FairCom uses Oracle-style schema.table naming where the schema is the username.
+        The systables table is owned by the ADMIN user (case-sensitive).
         """
         try:
+            # Query ADMIN.systables (note: ADMIN must be uppercase as FairCom is case-sensitive)
             result = connection.execute(
-                text("SELECT tbl FROM admin.systables WHERE tbltype = 'T' ORDER BY tbl")
+                text("SELECT tbl FROM ADMIN.systables WHERE tbltype = 'T' ORDER BY tbl")
             )
             return [row[0] for row in result]
         except Exception:

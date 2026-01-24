@@ -5,6 +5,14 @@ All notable changes to sqlalchemy-faircom will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] - 2026-01-23
+
+### Fixed
+- **Case-Sensitive Schema Query**: Changed `admin.systables` to `ADMIN.systables` (uppercase)
+  - FairCom uses Oracle-style schema.table naming where schema = username
+  - Usernames are case-sensitive (must be ADMIN, not admin)
+  - Query now correctly uses `SELECT tbl FROM ADMIN.systables WHERE tbltype = 'T'`
+
 ## [0.1.17] - 2026-01-23
 
 ### Added

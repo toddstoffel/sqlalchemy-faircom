@@ -12,7 +12,7 @@ A pure Python SQLAlchemy dialect for FairCom Database using the JSON/REST API. T
 - ✅ SQLAlchemy compatible (1.4+)
 - ✅ DB-API 2.0 compliant
 - ✅ Uses FairCom JSON API over HTTP/HTTPS
-- ✅ Compatible with Apache Superset, Pandas, and other SQLAlchemy-based tools
+- ✅ Works with any SQLAlchemy-based tool: Pandas, Alembic, ORMs, BI tools, etc.
 
 ## Installation
 
@@ -157,12 +157,11 @@ sqlalchemy-faircom/
 
 - Python 3.7+
 - SQLAlchemy 1.4+
-- ✅ **Apache Superset** - Full pagination support
-- Works with any tool that uses SQLAlchemy (e.g., Pandas, Jupyter notebooks, etc.)
+- Works with any SQLAlchemy-based application or tool
 
 ## Pagination Support
 
-FairCom uses **SKIP** syntax instead of the standard OFFSET. This driver automatically converts SQLAlchemy pagination:
+FairCom uses **TOP/SKIP** syntax (T-SQL style) instead of the standard LIMIT/OFFSET. This driver automatically converts SQLAlchemy pagination:
 
 - **LIMIT only**: Generates `SELECT TOP n ...` (optimized)
   ```python
@@ -179,9 +178,21 @@ FairCom uses **SKIP** syntax instead of the standard OFFSET. This driver automat
   query.offset(5)  # → SELECT ... SKIP 5
   ```
 
-### Apache Superset Compatibility
+## Compatibility with BI Tools & Data Tools
 
-✅ **Full pagination support** - Apache Superset's data exploration features work seamlessly with this driver. The automatic OFFSET→SKIP conversion ensures all Superset queries execute correctly.
+This SQLAlchemy dialect works with any tool that uses SQLAlchemy for database connectivity:
+
+- **BI/Visualization Tools**: Apache Superset, Metabase, Redash, and others
+- **Data Analysis**: Pandas, Jupyter notebooks, data science workflows
+- **Database Migration**: Alembic and other SQLAlchemy-based migration tools
+- **ORM Frameworks**: SQLAlchemy ORM, Flask-SQLAlchemy, FastAPI with SQLAlchemy
+- **ETL Tools**: Any Python-based ETL pipeline using SQLAlchemy
+
+### Apache Superset
+
+For Apache Superset specifically, additional configuration is required to register FairCom's T-SQL dialect with Superset's SQL parser.
+
+📖 **[Superset Setup Guide →](SUPERSET.md)**
 
 ## Limitations
 

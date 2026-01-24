@@ -4,6 +4,7 @@ include CHANGELOG.md
 include pyproject.toml
 include QUICKSTART.md
 recursive-include faircom_jsonapi *.py
+recursive-include examples *.py *.md
 prune tests
 global-exclude __pycache__
 global-exclude *.py[co]

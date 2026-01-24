@@ -13,13 +13,97 @@ This guide explains how to connect Apache Superset to FairCom Database using the
 
 The `sqlalchemy-faircom` connector must be installed in the same Python environment where Superset is running.
 
-### Installing the Connector
+### Step 1: Install the Connector
 
 ```bash
 pip install sqlalchemy-faircom
 ```
 
-After installation, restart Superset to ensure the new dialect is recognized.
+### Step 2: Configure Superset for FairCom
+
+**IMPORTANT**: Superset requires additional configuration files to properly parse FairCom's T-SQL syntax.
+
+#### Required Configuration Files
+
+Two files must be added to your Superset pythonpath:
+
+1. **`faircom_engine_spec.py`** - Engine specification for Superset
+2. **`superset_config.py`** - Registers FairCom with sqlglot parser
+
+These files are included with the package in `examples/superset/`. Find them in your Python site-packages:
+
+```bash
+# Find the examples directory
+python -c "import os, sqlalchemy_faircom; print(os.path.dirname(sqlalchemy_faircom.__file__))"
+
+# Look for: ../examples/superset/
+```
+
+Or download from GitHub:
+- [faircom_engine_spec.py](https://github.com/toddstoffel/sqlalchemy-faircom/blob/main/examples/superset/faircom_engine_spec.py)
+- [superset_config.py](https://github.com/toddstoffel/sqlalchemy-faircom/blob/main/examples/superset/superset_config.py)
+
+#### Installation Methods
+
+**Option A: Docker Deployment**
+
+Add to your Dockerfile:
+```dockerfile
+FROM apache/superset:latest
+
+# Install sqlalchemy-faircom
+RUN pip install sqlalchemy-faircom
+
+# Copy FairCom configuration files
+COPY faircom_engine_spec.py /app/pythonpath/
+COPY superset_config.py /app/pythonpath/
+```
+
+Or copy to running container:
+```bash
+docker cp faircom_engine_spec.py superset:/app/pythonpath/
+docker cp superset_config.py superset:/app/pythonpath/
+docker restart superset
+```
+
+Or mount as volumes in docker-compose.yml:
+```yaml
+services:
+  superset:
+    volumes:
+      - ./faircom_engine_spec.py:/app/pythonpath/faircom_engine_spec.py
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+```
+
+**Option B: Local Installation**
+
+```bash
+# Find your Superset config directory
+superset config
+
+# Copy files (typically to ~/.superset/)
+cp faircom_engine_spec.py ~/.superset/
+cp superset_config.py ~/.superset/
+```
+
+### Step 3: Verify Installation
+
+After restarting Superset, check the logs for:
+
+```
+✓ FairCom engine spec registered successfully
+```
+
+If you see this message, FairCom is properly configured. If not, ensure both files are in the same directory and in your PYTHONPATH.
+
+**Why These Files Are Needed:**
+
+Superset uses **sqlglot** to parse and validate SQL queries. By default, sqlglot doesn't recognize FairCom's T-SQL dialect (TOP, SKIP syntax). These configuration files:
+- Register FairCom with sqlglot's T-SQL parser  
+- Provide connection string templates
+- Enable proper syntax highlighting and query validation
+
+Without these files, you'll see SQL parsing errors when using Superset's query builder.
 
 **For system administrators**: If you manage Superset's deployment, ensure this package is included in your Superset environment dependencies. The connector will automatically register itself with SQLAlchemy via entry points.
 
@@ -263,7 +347,7 @@ Enable caching in Superset to improve dashboard performance:
 
 ## Version Compatibility
 
-- **sqlalchemy-faircom**: 0.1.16+
+- **sqlalchemy-faircom**: 0.1.19+
 - **SQLAlchemy**: 1.4+
 - **Apache Superset**: 2.0+
 - **Python**: 3.7+
@@ -281,4 +365,4 @@ For Apache Superset issues:
 ---
 
 **Last Updated**: January 2026  
-**Connector Version**: 0.1.16
+**Connector Version**: 0.1.19

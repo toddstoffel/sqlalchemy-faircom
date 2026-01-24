@@ -13,6 +13,9 @@ apilevel = '2.0'
 threadsafety = 1  # Threads may share the module, but not connections
 paramstyle = 'qmark'  # Question mark style, e.g. ...WHERE name=?
 
+# Set to True to enable detailed SQL logging
+DEBUG_SQL = False
+
 
 class Error(Exception):
     pass
@@ -113,6 +116,39 @@ class Cursor:
                 return sqlparse.parse(sql_str)[0]
         
         return statement
+    
+    def _quote_reserved_words(self, sql_str):
+        """Quote T-SQL reserved words used as identifiers in SQL.
+        
+        This handles cases where column aliases or identifiers use reserved words like 'count',
+        which FairCom SQL engine rejects. Common pattern: COUNT(*) AS count
+        """
+        # T-SQL reserved words that commonly appear as column aliases
+        common_reserved = {
+            'count', 'sum', 'avg', 'min', 'max', 'date', 'time', 'timestamp',
+            'user', 'table', 'view', 'index', 'key', 'value', 'default', 'order'
+        }
+        
+        # Pattern: AS <word> (where word is a reserved word not already quoted)
+        # Matches: AS count, AS sum, etc. but not AS "count" or AS [count]
+        for word in common_reserved:
+            # Match AS <word> in various positions (after SELECT, in ORDER BY, etc.)
+            # Use word boundaries to avoid matching partial words
+            pattern = r'\bAS\s+(' + word + r')\b(?!\s*["\[])'
+            replacement = r'AS "' + word + r'"'
+            sql_str = re.sub(pattern, replacement, sql_str, flags=re.IGNORECASE)
+            
+            # Also handle ORDER BY <word> (unquoted reserved word)
+            pattern = r'\bORDER\s+BY\s+(' + word + r')\b(?!\s*["\[])'
+            replacement = r'ORDER BY "' + word + r'"'
+            sql_str = re.sub(pattern, replacement, sql_str, flags=re.IGNORECASE)
+            
+            # Handle GROUP BY <word>
+            pattern = r'\bGROUP\s+BY\s+(' + word + r')\b(?!\s*["\[])'
+            replacement = r'GROUP BY "' + word + r'"'
+            sql_str = re.sub(pattern, replacement, sql_str, flags=re.IGNORECASE)
+        
+        return sql_str
 
     def execute(self, operation, parameters=None):
         """Execute a database operation (query or command)"""
@@ -128,6 +164,10 @@ class Cursor:
         # CONVERT LIMIT/OFFSET TO TOP/SKIP FOR FAIRCOM COMPATIBILITY
         # Use proper SQL parsing instead of fragile regex
         operation = self._convert_limit_to_top(operation)
+        
+        # QUOTE RESERVED WORDS used as identifiers
+        # This handles cases like: COUNT(*) AS count, ORDER BY count
+        operation = self._quote_reserved_words(operation)
         
         print(f"[DBAPI] ===== FINAL SQL =====", file=sys.stderr)
         print(operation, file=sys.stderr)

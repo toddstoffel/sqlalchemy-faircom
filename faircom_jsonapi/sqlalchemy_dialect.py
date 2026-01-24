@@ -75,6 +75,41 @@ class FairComJSONDialect(default.DefaultDialect):
     name = 'faircom'
     driver = 'jsonapi'
     
+    # FairCom uses T-SQL syntax - add T-SQL reserved words
+    # This ensures SQLAlchemy quotes identifiers that conflict with reserved words
+    reserved_words = {
+        'add', 'all', 'alter', 'and', 'any', 'as', 'asc', 'authorization',
+        'backup', 'begin', 'between', 'break', 'browse', 'bulk', 'by',
+        'cascade', 'case', 'check', 'checkpoint', 'close', 'clustered', 'coalesce',
+        'collate', 'column', 'commit', 'compute', 'constraint', 'contains',
+        'containstable', 'continue', 'convert', 'count', 'create', 'cross',
+        'current', 'current_date', 'current_time', 'current_timestamp',
+        'current_user', 'cursor', 'database', 'dbcc', 'deallocate',
+        'declare', 'default', 'delete', 'deny', 'desc', 'disk', 'distinct',
+        'distributed', 'double', 'drop', 'dump', 'else', 'end', 'errlvl',
+        'escape', 'except', 'exec', 'execute', 'exists', 'exit', 'external',
+        'fetch', 'file', 'fillfactor', 'for', 'foreign', 'freetext',
+        'freetexttable', 'from', 'full', 'function', 'goto', 'grant', 'group',
+        'having', 'holdlock', 'identity', 'identity_insert', 'identitycol',
+        'if', 'in', 'index', 'inner', 'insert', 'intersect', 'into', 'is',
+        'join', 'key', 'kill', 'left', 'like', 'lineno', 'load', 'merge',
+        'national', 'nocheck', 'nonclustered', 'not', 'null', 'nullif', 'of',
+        'off', 'offsets', 'on', 'open', 'opendatasource', 'openquery',
+        'openrowset', 'openxml', 'option', 'or', 'order', 'outer', 'over',
+        'percent', 'pivot', 'plan', 'precision', 'primary', 'print', 'proc',
+        'procedure', 'public', 'raiserror', 'read', 'readtext', 'reconfigure',
+        'references', 'replication', 'restore', 'restrict', 'return', 'revert',
+        'revoke', 'right', 'rollback', 'rowcount', 'rowguidcol', 'rule', 'save',
+        'schema', 'securityaudit', 'select', 'semantickeyphrasetable',
+        'semanticsimilaritydetailstable', 'semanticsimilaritytable', 'session_user',
+        'set', 'setuser', 'shutdown', 'some', 'statistics', 'sum', 'system_user',
+        'table', 'tablesample', 'textsize', 'then', 'to', 'top', 'tran',
+        'transaction', 'trigger', 'truncate', 'try_convert', 'tsequal',
+        'union', 'unique', 'unpivot', 'update', 'updatetext', 'use', 'user',
+        'values', 'varying', 'view', 'waitfor', 'when', 'where', 'while',
+        'with', 'withingroup', 'writetext'
+    }
+    
     @classmethod
     def dbapi(cls):
         """Return the DB-API module"""
@@ -128,35 +163,81 @@ class FairComJSONDialect(default.DefaultDialect):
         """Commit implementation"""
         pass
     
+    def _get_username_from_connection(self, connection):
+        """Extract username from the connection.
+        
+        Returns the username that authenticated the connection,
+        which is used as the schema name in FairCom's Oracle-style naming.
+        """
+        try:
+            # Get the underlying DBAPI connection
+            dbapi_conn = connection.connection
+            if hasattr(dbapi_conn, 'username'):
+                return dbapi_conn.username
+        except Exception:
+            pass
+        # Default fallback
+        return 'ADMIN'
+    
     def get_schema_names(self, connection, **kw):
         """Return a list of schema names available in the database.
-        FairCom doesn't have schemas, so return None (default schema)."""
-        return [None]
+        FairCom uses Oracle-style schema.table naming where schema = username.
+        Return the authenticated username as the schema."""
+        username = self._get_username_from_connection(connection)
+        return [username]
     
     def get_table_names(self, connection, schema=None, **kw):
         """Return a list of table names for the given schema.
         
         FairCom uses Oracle-style schema.table naming where the schema is the username.
-        The systables table is owned by the ADMIN user (case-sensitive).
         """
         try:
-            # Query ADMIN.systables (note: ADMIN must be uppercase as FairCom is case-sensitive)
+            # Get the username to query the correct schema's systables
+            username = schema if schema else self._get_username_from_connection(connection)
+            
+            # Query username.systables (username must match connection credentials)
             result = connection.execute(
-                text("SELECT tbl FROM ADMIN.systables WHERE tbltype = 'T' ORDER BY tbl")
+                text(f"SELECT tbl FROM {username}.systables WHERE tbltype = 'T' ORDER BY tbl")
             )
             return [row[0] for row in result]
         except Exception:
             # If query fails, return empty list
             return []
     
+    def get_view_names(self, connection, schema=None, **kw):
+        """Return a list of view names for the given schema.
+        
+        FairCom views are also stored in systables with tbltype = 'V'.
+        """
+        try:
+            # Get the username to query the correct schema's systables
+            username = schema if schema else self._get_username_from_connection(connection)
+            
+            result = connection.execute(
+                text(f"SELECT tbl FROM {username}.systables WHERE tbltype = 'V' ORDER BY tbl")
+            )
+            return [row[0] for row in result]
+        except Exception:
+            # If query fails, return empty list (no views)
+            return []
+    
     def get_columns(self, connection, table_name, schema=None, **kw):
         """Return column information for the given table.
         
         Query the table directly to introspect column structure.
+        If schema is provided, use schema.table format (Oracle-style).
         """
         try:
+            # Build table reference - use schema.table if schema provided
+            if schema and schema.upper() != 'ADMIN':
+                # If non-ADMIN schema, use qualified name
+                table_ref = f"{schema}.{table_name}"
+            else:
+                # ADMIN schema or no schema - just use table name
+                table_ref = table_name
+            
             # Query one row to get column structure
-            result = connection.execute(text(f"SELECT TOP 1 * FROM {table_name}"))
+            result = connection.execute(text(f"SELECT TOP 1 * FROM {table_ref}"))
             
             # Get column names from cursor description
             columns = []
@@ -175,6 +256,30 @@ class FairComJSONDialect(default.DefaultDialect):
         except Exception as e:
             # Table doesn't exist or can't be queried
             return []
+    
+    def get_pk_constraint(self, connection, table_name, schema=None, **kw):
+        """Return primary key constraint information.
+        
+        FairCom doesn't expose PK metadata easily via JSON API.
+        Return empty dict to indicate no PK info available.
+        """
+        return {'constrained_columns': [], 'name': None}
+    
+    def get_foreign_keys(self, connection, table_name, schema=None, **kw):
+        """Return foreign key information.
+        
+        FairCom doesn't expose FK metadata easily via JSON API.
+        Return empty list to indicate no FK info available.
+        """
+        return []
+    
+    def get_indexes(self, connection, table_name, schema=None, **kw):
+        """Return index information.
+        
+        FairCom doesn't expose index metadata easily via JSON API.
+        Return empty list to indicate no index info available.
+        """
+        return []
     
     def has_table(self, connection, table_name, schema=None, **kw):
         """Check if a table exists."""

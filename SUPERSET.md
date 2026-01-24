@@ -33,9 +33,14 @@ faircom://username:password@host:port/database?protocol=http
 
 ### Example Connection Strings
 
-**HTTP Connection:**
+**HTTP Connection (local server):**
 ```
 faircom://ADMIN:ADMIN@localhost:8080/mydb?protocol=http
+```
+
+**HTTP Connection (remote server):**
+```
+faircom://ADMIN:ADMIN@faircom-server.example.com:8080/mydb?protocol=http
 ```
 
 **HTTPS Connection:**
@@ -68,8 +73,10 @@ Always verify your credentials match the exact case configured in your FairCom s
 
 ### Step 2: Select Database Type
 
-- **Display Name**: Enter a friendly name (e.g., "FairCom Production")
-- **SQLAlchemy URI**: Enter your connection string
+- **Display Name**: Enyour-server.example.com:8080/your_database?protocol=http
+```
+
+Replace `your-server.example.com`, `8080`, and `your_database` with your actual FairCom server details.*SQLAlchemy URI**: Enter your connection string
 
 Example:
 ```
